@@ -6,9 +6,10 @@
           Sua ToDo List
         </h1>
       </v-flex>
-      <v-flex xs12>
+      <v-flex xs12 @keyup.enter="createTodoAUX">
         <span>Quais são as atividades de hoje? </span>
         <v-text-field
+          autofocus
           placeholder="digite algo :)"
           class="mt-2"
           :dark="true"
@@ -30,40 +31,57 @@
           <span class="btn-text">Adicionar</span>
           <span class="btn-icon"> <v-icon class="i">mdi-check</v-icon></span>
         </v-btn>
+        <v-btn
+          v-show="toDelete.length > 0"
+          @click="toDeleteItens()"
+          small
+          color="error"
+        >
+          <span style="color: black">excluir itens selecionados </span>
+          <v-icon color="black">mdi-delete</v-icon>
+        </v-btn>
       </v-flex>
     </v-layout>
     <v-layout>
-      <v-flex>
-        <div class="todoItem" v-for="todo in todoList" :key="todo._id">
-          <v-checkbox
-            @click="checkTodo(todo._id, todo.todo, todo.isDone)"
-            v-model="todo.isDone"
-            color="black"
-          ></v-checkbox>
-          <div style="width: 80%">
-            <span
-              style="font-size: 1.3rem"
-              :class="todo.isDone ? 'textDecorateOff' : 'textDecorate'"
-              >{{ todo.todo }}</span
-            >
+      <v-flex class="mt-n8">
+        <div style="display: flex" v-for="todo in todoList" :key="todo._id">
+          <div>
+            <v-checkbox dark @click="addToDelete(todo._id)" color="white" />
           </div>
-          <v-icon
-            :class="todo.priority ? 'yellow--text' : ''"
-            @click="priorityTodo(todo)"
-            
-          >
-            {{ todo.priority ? "mdi-star" : "mdi-star-outline" }}
-          </v-icon>
-          <EditTodo :idTodo="todo._id" @switchDialog="switchDialog" />
-          <v-btn
-            :disabled="todo.priority"
-            color="error"
-            class="ml-3"
-            @click="confirmDelete(todo._id)"
-            icon
-          >
-            <v-icon size="29">mdi-delete</v-icon>
-          </v-btn>
+          <div class="todoItem">
+            <v-checkbox
+              @click="checkTodo(todo._id, todo.todo, todo.isDone)"
+              v-model="todo.isDone"
+              color="black"
+            ></v-checkbox>
+            <div style="width: 80%">
+              <span
+                style="font-size: 1.3rem"
+                :class="todo.isDone ? 'textDecorateOff' : 'textDecorate'"
+                >{{ todo.todo }}</span
+              >
+            </div>
+            <v-icon
+              :class="todo.priority ? 'yellow--text' : ''"
+              @click="priorityTodo(todo)"
+            >
+              {{ todo.priority ? "mdi-star" : "mdi-star-outline" }}
+            </v-icon>
+            <EditTodo
+              :isDone="todo.isDone"
+              :idTodo="todo._id"
+              @switchDialog="switchDialog"
+            />
+            <v-btn
+              :disabled="todo.priority"
+              color="error"
+              class="ml-3"
+              @click="confirmDelete(todo._id)"
+              icon
+            >
+              <v-icon size="29">mdi-delete</v-icon>
+            </v-btn>
+          </div>
         </div>
       </v-flex>
     </v-layout>
@@ -85,7 +103,8 @@ interface Data {
   todoList: any[];
   loadingField: boolean;
   isDone: boolean;
-  isStarEnabled:boolean
+  isStarEnabled: boolean;
+  toDelete: any[];
 }
 export default Vue.extend({
   name: "FormComp",
@@ -94,18 +113,63 @@ export default Vue.extend({
   },
   data(): Data {
     return {
-      isStarEnabled:false,
+      isStarEnabled: false,
       isDone: false,
       todo: "",
       todoList: [],
       loadingField: false,
+      toDelete: [],
     };
   },
   methods: {
+    toDeleteItens(): void {
+      Swal.fire({
+        title: "Excluir atividade?",
+        text: "Tem certeza que deseja excluir esta atividade?",
+        iconHtml: "<span class='emoji'>🤔</span>",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Sim, excluir!",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          Swal.fire({
+            title: "Atividades excluídas!",
+            text: "As atividades foram excluídas com sucesso.",
+            iconHtml: "<span class='emoji'>&#x1F609;</span>",
+          }).then(async () => {
+            await this.toDelete.forEach( (todoId) => {
+              deleteTodo(todoId);
+              this.toDelete = [];
+            });
+            this.getAllTodos();
+          });
+        } else {
+          Swal.fire({
+            title: "Exclusões canceladas!",
+            text: "As atividades não foram excluídas.",
+            iconHtml: "<span class='emoji'>😛</span>",
+          });
+        }
+      });
+    },
+
+    addToDelete(id: string): void {
+      if (this.toDelete.includes(id)) {
+        const index = this.toDelete.indexOf(id);
+        this.toDelete.splice(index, 1);
+        return;
+      }
+      this.toDelete.push(id);
+    },
+
     async priorityTodo(todo: any) {
-      this.isStarEnabled  = todo.priority
-      this.isStarEnabled = !this.isStarEnabled
-      const update = await updateTodo({ ...todo, priority: this.isStarEnabled }, todo._id)
+      this.isStarEnabled = todo.priority;
+      this.isStarEnabled = !this.isStarEnabled;
+      const update = await updateTodo(
+        { ...todo, priority: this.isStarEnabled },
+        todo._id
+      );
       this.getAllTodos();
     },
 
@@ -203,6 +267,7 @@ export default Vue.extend({
   padding: 0 1rem;
   border-radius: 5px;
   box-shadow: 3px 3px 10px 10px rgba(0, 0, 0, 0.363);
+  width: 100%;
 }
 .textDecorate {
   background-image: linear-gradient(to right, #000 50%, transparent 90%);
@@ -244,30 +309,7 @@ export default Vue.extend({
   }
 }
 
-.btn:hover .btn-text {
-  opacity: 0;
-}
-
-.btn:hover .btn-icon {
-  opacity: 1;
-}
-
-.btn-text {
-  position: relative;
-  transition: opacity 0.3s ease-out;
-}
-
-.btn-icon {
-  opacity: 0;
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  transition: opacity 0.3s ease-out;
-}
-
-.btn-disabled {
-  opacity: 1.6;
-  color: #fff !important;
-  background-color: #fa0c0c !important;
+.marginButtonDeleteItens {
+  margin-left: 4%;
 }
 </style>
