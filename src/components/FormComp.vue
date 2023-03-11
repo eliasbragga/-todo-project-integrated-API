@@ -9,6 +9,7 @@
       <v-flex xs12 @keyup.enter="createTodoAUX">
         <span>Quais são as atividades de hoje? </span>
         <v-text-field
+          :disabled="loadingField"
           autofocus
           placeholder="digite algo :)"
           class="mt-2"
@@ -46,10 +47,11 @@
       <v-flex class="mt-n8">
         <div style="display: flex" v-for="todo in todoList" :key="todo._id">
           <div>
-            <v-checkbox dark @click="addToDelete(todo._id)" color="white" />
+            <v-checkbox :disabled="loadingField" dark @click="addToDelete(todo._id)" color="white" />
           </div>
           <div class="todoItem">
             <v-checkbox
+            :disabled="loadingField"
               @click="checkTodo(todo._id, todo.todo, todo.isDone)"
               v-model="todo.isDone"
               color="black"
@@ -62,18 +64,20 @@
               >
             </div>
             <v-icon
+            :disabled="loadingField"
               :class="todo.priority ? 'yellow--text' : ''"
               @click="priorityTodo(todo)"
             >
               {{ todo.priority ? "mdi-star" : "mdi-star-outline" }}
             </v-icon>
             <EditTodo
+            :loadingField="loadingField"
               :isDone="todo.isDone"
               :idTodo="todo._id"
               @switchDialog="switchDialog"
             />
             <v-btn
-              :disabled="todo.priority"
+              :disabled="todo.priority || loadingField"
               color="error"
               class="ml-3"
               @click="confirmDelete(todo._id)"
@@ -89,6 +93,7 @@
 </template>
 
 <script lang="ts">
+import {integrationChatgpt} from '@/services/chatgptServices'
 import Swal from "sweetalert2";
 import EditTodo from "./EditTodo.vue";
 import {
@@ -98,6 +103,13 @@ import {
   updateTodo,
 } from "@/services/formService";
 import Vue from "vue";
+  interface Teste {
+  model: string,
+  prompt: string,
+  max_tokens: number,
+  temperature: number,
+  }
+
 interface Data {
   todo: string;
   todoList: any[];
@@ -105,6 +117,8 @@ interface Data {
   isDone: boolean;
   isStarEnabled: boolean;
   toDelete: any[];
+  bodyRequest: Teste,
+  messageAPI: string
 }
 export default Vue.extend({
   name: "FormComp",
@@ -119,6 +133,13 @@ export default Vue.extend({
       todoList: [],
       loadingField: false,
       toDelete: [],
+      bodyRequest:{
+        model: "text-davinci-003",
+        prompt: '',
+        max_tokens: 200,
+        temperature: 0.6,
+      },
+      messageAPI:''
     };
   },
   methods: {
@@ -180,12 +201,23 @@ export default Vue.extend({
     async createTodoAUX() {
       this.loadingField = true;
       try {
-        await createTodo<Data>({ todo: this.todo });
-        this.$swal({
-          icon: "success",
-          text: "Atividade criada com sucesso \u{1F60E}",
+        await createTodo<Data>({ todo: this.todo });       
+        await this.apiChatGPT(this.todo).then(async res => {
+          this.todo = "";
+          this.loadingField = false
+          await this.$swal({
+          text: this.messageAPI,
         });
+        this.$swal({
+          iconHtml: "<span class='emoji'>\u{1F60E}</span>",
+          text: "Atividade criada com sucesso ",
+        });
+        }).finally(() => {
+          this.loadingField = false
+          this.todo = "";
+        })
         this.getAllTodos();
+        
       } catch (err) {
         this.$swal({
           iconHtml: "<span class='emoji'>\u{1F622}</span>",
@@ -235,6 +267,18 @@ export default Vue.extend({
     switchDialog(): void {
       this.getAllTodos();
     },
+
+    apiChatGPT(todo: string) {
+      let prefix
+      if(todo.includes('estudar' || 'estudo')) {
+        prefix = 'Me liste os principais conteudos deste assunto'
+      } else {
+        prefix = 'Em um texto descontraido, me motivo a realizar esta tarefa e como posso fazer isso'
+
+      }       
+      return integrationChatgpt({...this.bodyRequest, prompt: `${todo}. ${prefix}`}).then(res => this.messageAPI = res.data.choices[0].text)
+    }
+
   },
   async mounted() {
     await this.getAllTodos();
