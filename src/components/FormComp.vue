@@ -3,11 +3,16 @@
     <v-layout row wrap class="layout">
       <v-flex xs12 class="mb-7">
         <h1 style="font-size: 3.5rem" class="text-center messageTitle">
-          Sua ToDo List
+          Sua To-Do List
         </h1>
       </v-flex>
-      <v-flex xs12 @keyup.enter="createTodoAUX">
-        <span>Quais são as atividades de hoje? </span>
+      <v-flex
+        class="pl-9"
+        xs12
+        @keyup.enter="nextStep === 0 ? nextStep++ : createTodoAUX()"
+        v-if="nextStep === 0"
+      >
+        <p class="">Quais são as atividades de hoje? </p>
         <v-text-field
           :disabled="loadingField || loadingCard"
           autofocus
@@ -19,17 +24,40 @@
           v-model="todo"
         />
       </v-flex>
-      <v-flex xs12 class="mb-9 mt-n5">
+      <v-flex
+      class="pl-9"
+        xs12
+        @keyup.enter="nextStep === 0 ? nextStep++ : createTodoAUX()"
+        v-else
+      >
+        <span>Que tal fazer uma breve descrição da atividade? </span>
+        <v-textarea
+          :append-icon="'mdi-arrow-left'"
+          @click:append="nextStep--"
+          rows="3"
+          :disabled="loadingField || loadingCard"
+          autofocus
+          placeholder="descrição..."
+          class="mt-2"
+          :dark="true"
+          dense
+          outlined
+          v-model="description"
+        />
+      </v-flex>
+      <v-flex xs12 class="mb-9 mt-n5 ml-8">
         <v-btn
           :class="{ 'btn-disabled': todo.length < 1 }"
           title="Digite algo"
           :disabled="todo.length < 1 || loadingCard"
           :loading="loadingField"
-          @click="createTodoAUX"
+          @click="nextStep === 0 ? nextStep++ : createTodoAUX()"
           color="black"
           class="btn"
         >
-          <span class="btn-text">Adicionar</span>
+          <span class="btn-text">{{
+            nextStep === 0 ? "Adicionar" : "Salvar"
+          }}</span>
           <span class="btn-icon"> <v-icon class="i">mdi-check</v-icon></span>
         </v-btn>
         <v-btn
@@ -45,34 +73,47 @@
     </v-layout>
     <v-layout>
       <v-flex class="mt-n8">
-        <div :style="{ display: 'flex' }" v-for="(todo, index) in todoList" :key="todo._id">
+        <div
+          :style="{ display: 'flex' }"
+          v-for="(todo, index) in todoList"
+          :key="todo._id"
+        >
           <div>
-            <v-checkbox :disabled="loadingField || loadingCard" dark @click="addToDelete(todo._id)" color="white" />
-          </div>
-          <div :style="{backgroundColor: background[index]}" class="todoItem" @dblclick="openDialog(todo.todo, $event, index)">
             <v-checkbox
-            :disabled="loadingField || loadingCard"
+              :disabled="loadingField || loadingCard"
+              dark
+              @click="addToDelete(todo._id)"
+              color="white"
+            />
+          </div>
+          <div
+            :style="{ backgroundColor: background[index] }"
+            class="todoItem"
+            @dblclick="openDialog(todo.todo, $event, index)"
+          >
+            <v-checkbox
+              :disabled="loadingField || loadingCard"
               @click="checkTodo(todo._id, todo.todo, todo.isDone)"
               v-model="todo.isDone"
               color="black"
             ></v-checkbox>
             <div style="width: 80%">
               <span
-              style="font-size: 1.3rem"
-              :class="todo.isDone ? 'textDecorateOff' : 'textDecorate'"
-              >{{ todo.todo }}</span
+                style="font-size: 1.3rem"
+                :class="todo.isDone ? 'textDecorateOff' : 'textDecorate'"
+                >{{ todo.todo }}</span
               >
             </div>
             <v-icon
-            :disabled="loadingField || loadingCard"
+              :disabled="loadingField || loadingCard"
               :class="todo.priority ? 'yellow--text' : ''"
               @click="priorityTodo(todo)"
             >
               {{ todo.priority ? "mdi-star" : "mdi-star-outline" }}
             </v-icon>
             <EditTodo
-            :loadingField="loadingField"
-            :loadingCard="loadingCard"
+              :loadingField="loadingField"
+              :loadingCard="loadingCard"
               :isDone="todo.isDone"
               :idTodo="todo._id"
               @switchDialog="switchDialog"
@@ -86,7 +127,30 @@
             >
               <v-icon size="29">mdi-delete</v-icon>
             </v-btn>
-      <InfoMessage @closeDialog="closeDialog" :dialog="dialog" :index="index" :infoMessage="messageAPI"/>
+            <v-flex>
+              <v-menu  bottom offset-x  offset-y dark>
+                <template v-slot:activator="{ on, attrs }">
+                  <v-btn dark icon v-bind="attrs" v-on="on">
+                    <v-icon color="black">mdi-dots-vertical</v-icon>
+                  </v-btn>
+                </template>
+                <v-list>
+                  <v-list-item>
+                    <v-list-item-title>
+                      <Description :id="todo._id" :todo="todo.todo"/>
+                      <v-icon @click="openDialog(todo.todo, $event, index)" color="#fbc531"> mdi-lightbulb </v-icon>
+                    </v-list-item-title>
+                  </v-list-item>
+                </v-list>
+              </v-menu>
+            </v-flex>
+            <InfoMessage
+              @closeDialog="closeDialog"
+              :dialog="dialog"
+              :index="index"
+              :infoMessage="messageAPI"
+              :loadingEnd="loadingEnd"
+            />
           </div>
         </div>
       </v-flex>
@@ -95,10 +159,11 @@
 </template>
 
 <script lang="ts">
-import {integrationChatgpt} from '@/services/chatgptServices'
+import { integrationChatgpt } from "@/services/chatgptServices";
 import Swal from "sweetalert2";
 import EditTodo from "./EditTodo.vue";
 import InfoMessage from "./InfoMessage.vue";
+import Description from "./Description.vue";
 import {
   getTodos,
   createTodo,
@@ -106,75 +171,87 @@ import {
   updateTodo,
 } from "@/services/formService";
 import Vue from "vue";
-  interface Teste {
-  model: string,
-  prompt: string,
-  max_tokens: number,
-  temperature: number,
-  }
+interface Teste {
+  model: string;
+  prompt: string;
+  max_tokens: number;
+  temperature: number;
+}
 
 interface Data {
   todo: string;
+  description: string;
   todoList: any[];
   loadingField: boolean;
   isDone: boolean;
   isStarEnabled: boolean;
   toDelete: any[];
-  bodyRequest: Teste,
-  messageAPI: string,
-  dialog: boolean,
-  loadingCard: boolean,
-  background: any
+  bodyRequest: Teste;
+  messageAPI: string;
+  dialog: boolean;
+  loadingCard: boolean;
+  background: any;
+  nextStep: number;
+  idTodoItem: string
+  loadingEnd: boolean
 }
 export default Vue.extend({
   name: "FormComp",
   components: {
     EditTodo,
-    InfoMessage
+    InfoMessage,
+    Description
   },
   data(): Data {
     return {
+      loadingEnd: false,
+      idTodoItem: '',
+      nextStep: 0,
       background: {},
       loadingCard: false,
       dialog: false,
       isStarEnabled: false,
       isDone: false,
       todo: "",
+      description: "",
       todoList: [],
       loadingField: false,
       toDelete: [],
-      bodyRequest:{
+      bodyRequest: {
         model: "text-davinci-003",
-        prompt: '',
+        prompt: "",
         max_tokens: 400,
         temperature: 0.6,
       },
-      messageAPI:''
+      messageAPI: "",
     };
   },
   methods: {
-    closeDialog(index: number) {
-      this.background = {}
-      this.loadingCard = false
-      this.$set(this.background, index, '#33d9b2')
-      this.dialog = false
-      this.messageAPI = ""
+    openDescription(id: string): void {
+      this.idTodoItem = id
+    },
+
+    closeDialog(index: number): void {
+      this.loadingEnd = true
+      this.background = {};
+      this.loadingCard = false;
+      this.dialog = false;
+      this.messageAPI = "";
     },
 
     async openDialog(todo: string, event: any, index: number): Promise<any> {
-      if(!this.loadingCard) {
-        this.loadingCard = true
-        this.$set(this.background, index, '#437468')
-      }
-      return await this.apiChatGPT(todo).then(async res => {
-          this.dialog = true
+      this.dialog = true;
+      return await this.apiChatGPT(todo)
+        .then(async (res) => {
           this.todo = "";
-          this.loadingField = false
-        }).finally(() => {
-          this.loadingField = false
-          this.todo = "";
-          this.loadingCard = false
+          this.loadingField = false;
+          this.loadingEnd = true
         })
+        .finally(() => {
+          this.loadingField = false;
+          this.todo = "";
+          this.loadingCard = false;
+        });
     },
 
     toDeleteItens(): void {
@@ -193,7 +270,7 @@ export default Vue.extend({
             text: "As atividades foram excluídas com sucesso.",
             iconHtml: "<span class='emoji'>&#x1F609;</span>",
           }).then(async () => {
-            await this.toDelete.forEach( (todoId) => {
+            await this.toDelete.forEach((todoId) => {
               deleteTodo(todoId);
               this.toDelete = [];
             });
@@ -228,16 +305,19 @@ export default Vue.extend({
       this.getAllTodos();
     },
 
-    checkTodo(id: string, todo: string, isDone: boolean) {
+    checkTodo(id: string, todo: string, isDone: boolean): void {
       const update = updateTodo({ todo: todo, isDone: isDone }, id);
     },
 
-    async createTodoAUX() {
+    async createTodoAUX(){
       this.loadingField = true;
       try {
-        await createTodo<Data>({ todo: this.todo });       
+        await createTodo<Data>({
+          todo: this.todo,
+          description: this.description,
+        });
+        this.nextStep--;
         this.getAllTodos();
-        
       } catch (err) {
         this.$swal({
           iconHtml: "<span class='emoji'>\u{1F622}</span>",
@@ -245,11 +325,12 @@ export default Vue.extend({
         });
       } finally {
         this.todo = "";
+        this.description = "";
         this.loadingField = false;
       }
     },
 
-    confirmDelete(idTodo: string) {
+    confirmDelete(idTodo: string):void {
       Swal.fire({
         title: "Excluir atividade?",
         text: "Tem certeza que deseja excluir esta atividade?",
@@ -289,16 +370,18 @@ export default Vue.extend({
     },
 
     apiChatGPT(todo: string) {
-      let prefix
-      if(todo.includes('estudar' || 'estudo')) {
-        prefix = 'Me liste os principais conteudos deste assunto'
+      let prefix;
+      if (todo.includes("estudar" || "estudo")) {
+        prefix = "Me liste os principais conteudos deste assunto";
       } else {
-        prefix = 'Em um texto descontraido, me motivo a realizar esta tarefa e como posso fazer isso. Faça isso em um texto curto'
-
-      }       
-      return integrationChatgpt({...this.bodyRequest, prompt: `${todo}. ${prefix}`}).then(res => this.messageAPI = res.data.choices[0].text)
-    }
-
+        prefix =
+          "Em um texto descontraido, me motivo a realizar esta tarefa e como posso fazer isso. Faça isso em um texto curto";
+      }
+      return integrationChatgpt({
+        ...this.bodyRequest,
+        prompt: `${todo}. ${prefix}`,
+      }).then((res) => (this.messageAPI = res.data.choices[0].text));
+    },
   },
   async mounted() {
     await this.getAllTodos();
@@ -336,7 +419,6 @@ export default Vue.extend({
 
 .todoItemLoading {
   background: #437468;
- 
 }
 
 .textDecorate {
@@ -385,6 +467,5 @@ export default Vue.extend({
 
 .text-wait {
   color: black;
-
 }
 </style>

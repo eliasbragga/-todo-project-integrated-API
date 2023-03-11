@@ -47,11 +47,11 @@ export default Vue.extend({
     },
 
     updateTodoAUX() {
+      const update = updateTodo({ todo: this.todo }, this.idTodo);
       this.$swal({
         iconHtml: "<span class='emoji'>&#128512</span>",
         text: "Atividade atualizada com sucesso!",
       });
-      const update = updateTodo({ todo: this.todo }, this.idTodo);
       this.$emit("switchDialog");
       this.dialog = false;
     },
