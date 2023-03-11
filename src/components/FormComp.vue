@@ -145,8 +145,8 @@ export default Vue.extend({
   methods: {
     toDeleteItens(): void {
       Swal.fire({
-        title: "Excluir atividade?",
-        text: "Tem certeza que deseja excluir esta atividade?",
+        title: "Excluir atividades?",
+        text: "Tem certeza que deseja excluir estas atividades?",
         iconHtml: "<span class='emoji'>🤔</span>",
         showCancelButton: true,
         confirmButtonColor: "#3085d6",
@@ -240,11 +240,11 @@ export default Vue.extend({
         confirmButtonText: "Sim, excluir!",
       }).then((result) => {
         if (result.isConfirmed) {
-          Swal.fire(
-            "Atividade excluída!",
-            "A atividade foi excluída com sucesso.",
-            "success"
-          ).then(async () => {
+          Swal.fire({
+            title: "Atividade excluída!",
+            text: "A atividade foi excluída com sucesso.",
+            iconHtml: "<span class='emoji'>&#x1F609;</span>",
+          }).then(async () => {
             console.log(typeof idTodo);
             await deleteTodo(idTodo);
             this.getAllTodos();
