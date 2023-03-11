@@ -9,7 +9,7 @@
       <v-flex xs12 @keyup.enter="createTodoAUX">
         <span>Quais são as atividades de hoje? </span>
         <v-text-field
-          :disabled="loadingField"
+          :disabled="loadingField || loadingCard"
           autofocus
           placeholder="digite algo :)"
           class="mt-2"
@@ -23,7 +23,7 @@
         <v-btn
           :class="{ 'btn-disabled': todo.length < 1 }"
           title="Digite algo"
-          :disabled="todo.length < 1"
+          :disabled="todo.length < 1 || loadingCard"
           :loading="loadingField"
           @click="createTodoAUX"
           color="black"
@@ -45,26 +45,26 @@
     </v-layout>
     <v-layout>
       <v-flex class="mt-n8">
-        <div style="display: flex" v-for="todo in todoList" :key="todo._id">
+        <div :style="{ display: 'flex' }" v-for="(todo, index) in todoList" :key="todo._id">
           <div>
-            <v-checkbox :disabled="loadingField" dark @click="addToDelete(todo._id)" color="white" />
+            <v-checkbox :disabled="loadingField || loadingCard" dark @click="addToDelete(todo._id)" color="white" />
           </div>
-          <div class="todoItem">
+          <div :style="{backgroundColor: background[index]}" class="todoItem" @dblclick="openDialog(todo.todo, $event, index)">
             <v-checkbox
-            :disabled="loadingField"
+            :disabled="loadingField || loadingCard"
               @click="checkTodo(todo._id, todo.todo, todo.isDone)"
               v-model="todo.isDone"
               color="black"
             ></v-checkbox>
             <div style="width: 80%">
               <span
-                style="font-size: 1.3rem"
-                :class="todo.isDone ? 'textDecorateOff' : 'textDecorate'"
-                >{{ todo.todo }}</span
+              style="font-size: 1.3rem"
+              :class="todo.isDone ? 'textDecorateOff' : 'textDecorate'"
+              >{{ todo.todo }}</span
               >
             </div>
             <v-icon
-            :disabled="loadingField"
+            :disabled="loadingField || loadingCard"
               :class="todo.priority ? 'yellow--text' : ''"
               @click="priorityTodo(todo)"
             >
@@ -72,12 +72,13 @@
             </v-icon>
             <EditTodo
             :loadingField="loadingField"
+            :loadingCard="loadingCard"
               :isDone="todo.isDone"
               :idTodo="todo._id"
               @switchDialog="switchDialog"
             />
             <v-btn
-              :disabled="todo.priority || loadingField"
+              :disabled="todo.priority || loadingField || loadingCard"
               color="error"
               class="ml-3"
               @click="confirmDelete(todo._id)"
@@ -85,6 +86,7 @@
             >
               <v-icon size="29">mdi-delete</v-icon>
             </v-btn>
+      <InfoMessage @closeDialog="closeDialog" :dialog="dialog" :index="index" :infoMessage="messageAPI"/>
           </div>
         </div>
       </v-flex>
@@ -96,6 +98,7 @@
 import {integrationChatgpt} from '@/services/chatgptServices'
 import Swal from "sweetalert2";
 import EditTodo from "./EditTodo.vue";
+import InfoMessage from "./InfoMessage.vue";
 import {
   getTodos,
   createTodo,
@@ -118,15 +121,22 @@ interface Data {
   isStarEnabled: boolean;
   toDelete: any[];
   bodyRequest: Teste,
-  messageAPI: string
+  messageAPI: string,
+  dialog: boolean,
+  loadingCard: boolean,
+  background: any
 }
 export default Vue.extend({
   name: "FormComp",
   components: {
     EditTodo,
+    InfoMessage
   },
   data(): Data {
     return {
+      background: {},
+      loadingCard: false,
+      dialog: false,
       isStarEnabled: false,
       isDone: false,
       todo: "",
@@ -136,13 +146,37 @@ export default Vue.extend({
       bodyRequest:{
         model: "text-davinci-003",
         prompt: '',
-        max_tokens: 200,
+        max_tokens: 400,
         temperature: 0.6,
       },
       messageAPI:''
     };
   },
   methods: {
+    closeDialog(index: number) {
+      this.background = {}
+      this.loadingCard = false
+      this.$set(this.background, index, '#33d9b2')
+      this.dialog = false
+      this.messageAPI = ""
+    },
+
+    async openDialog(todo: string, event: any, index: number): Promise<any> {
+      if(!this.loadingCard) {
+        this.loadingCard = true
+        this.$set(this.background, index, '#437468')
+      }
+      return await this.apiChatGPT(todo).then(async res => {
+          this.dialog = true
+          this.todo = "";
+          this.loadingField = false
+        }).finally(() => {
+          this.loadingField = false
+          this.todo = "";
+          this.loadingCard = false
+        })
+    },
+
     toDeleteItens(): void {
       Swal.fire({
         title: "Excluir atividades?",
@@ -202,20 +236,6 @@ export default Vue.extend({
       this.loadingField = true;
       try {
         await createTodo<Data>({ todo: this.todo });       
-        await this.apiChatGPT(this.todo).then(async res => {
-          this.todo = "";
-          this.loadingField = false
-          await this.$swal({
-          text: this.messageAPI,
-        });
-        this.$swal({
-          iconHtml: "<span class='emoji'>\u{1F60E}</span>",
-          text: "Atividade criada com sucesso ",
-        });
-        }).finally(() => {
-          this.loadingField = false
-          this.todo = "";
-        })
         this.getAllTodos();
         
       } catch (err) {
@@ -273,7 +293,7 @@ export default Vue.extend({
       if(todo.includes('estudar' || 'estudo')) {
         prefix = 'Me liste os principais conteudos deste assunto'
       } else {
-        prefix = 'Em um texto descontraido, me motivo a realizar esta tarefa e como posso fazer isso'
+        prefix = 'Em um texto descontraido, me motivo a realizar esta tarefa e como posso fazer isso. Faça isso em um texto curto'
 
       }       
       return integrationChatgpt({...this.bodyRequest, prompt: `${todo}. ${prefix}`}).then(res => this.messageAPI = res.data.choices[0].text)
@@ -313,6 +333,12 @@ export default Vue.extend({
   box-shadow: 3px 3px 10px 10px rgba(0, 0, 0, 0.363);
   width: 100%;
 }
+
+.todoItemLoading {
+  background: #437468;
+ 
+}
+
 .textDecorate {
   background-image: linear-gradient(to right, #000 50%, transparent 90%);
   background-position: bottom;
@@ -355,5 +381,10 @@ export default Vue.extend({
 
 .marginButtonDeleteItens {
   margin-left: 4%;
+}
+
+.text-wait {
+  color: black;
+
 }
 </style>

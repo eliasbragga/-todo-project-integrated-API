@@ -1,6 +1,6 @@
 <template>
   <div>
-    <v-btn :disabled="isDone || loadingField" @click="openPopup()" class="ml-3" icon color="black">
+    <v-btn :disabled="isDone || loadingField || loadingCard" @click="openPopup()" class="ml-3" icon color="black">
       <v-icon size="29">mdi-pencil</v-icon>
     </v-btn>
     <v-dialog width="500" persistent v-model="dialog" >
@@ -32,7 +32,7 @@ interface Data {
 }
 export default Vue.extend({
   name: "FormComp",
-  props: ["idTodo", "isDone", "loadingField"],
+  props: ["idTodo", "isDone", "loadingField", "loadingCard"],
   data(): Data {
     return {
       dialog: false,
