@@ -1,8 +1,13 @@
 <template>
   <div>
-    <v-icon @click="handleClick" class="iconEyes">
-      mdi-eye
-    </v-icon>
+    <v-tooltip bottom>
+      <template v-slot:activator="{ on, attrs }">
+        <v-icon @click="handleClick" class="iconEyes" v-bind="attrs" v-on="on">
+          mdi-eye
+        </v-icon>
+      </template>
+      <span style="font-family: Arial, Helvetica, sans-serif; color: white;">Sua descrição</span>
+    </v-tooltip>
     <br /><br />
 
     <v-dialog
@@ -16,24 +21,37 @@
           <v-flex mb-4>
             <h1 class="text-center title-card">Descrição da atividade</h1>
           </v-flex>
-          <v-btn :disabled="editMode" dark class="mb-4" small @click="editDescription()">
-              <v-icon color="primary">mdi-pencil</v-icon>
+          <v-btn
+            :disabled="editMode"
+            dark
+            class="mb-4"
+            small
+            @click="editDescription()"
+          >
+            <v-icon color="primary">mdi-pencil</v-icon>
           </v-btn>
           <v-flex class="text-card" v-if="!editMode">
-            <p @dblclick="editDescription()" style="font-family: Arial, Helvetica, sans-serif; font-weight: bolder;">
-                {{ description }}
+            <p
+              @dblclick="editDescription()"
+              style="
+                font-family: Arial, Helvetica, sans-serif;
+                font-weight: bolder;
+              "
+            >
+              {{ description }}
             </p>
           </v-flex>
           <v-flex class="text-card" v-else>
-            <v-textarea
-            dark
-            outlined
-            rows="2"
-            v-model="description"
-            />
+            <v-textarea dark outlined rows="2" v-model="description" />
           </v-flex>
           <v-flex align-self-start>
-            <v-btn @loading="loadingFields" @click="!editMode ? closeDialog() : updateDescription()" block color="#33d9b2">{{ !editMode ? 'Fechar' : 'Salvar' }}</v-btn>
+            <v-btn
+              @loading="loadingFields"
+              @click="!editMode ? closeDialog() : updateDescription()"
+              block
+              color="#33d9b2"
+              >{{ !editMode ? "Fechar" : "Salvar" }}</v-btn
+            >
           </v-flex>
         </div>
       </v-card>
@@ -46,53 +64,55 @@ import Vue from "vue";
 import { getTodosById, updateTodo } from "@/services/formService";
 
 interface Data {
-    dialog: boolean,
-    description: string,
-    editMode: boolean,
-    loadingFields: boolean
+  dialog: boolean;
+  description: string;
+  editMode: boolean;
+  loadingFields: boolean;
 }
 
 export default Vue.extend({
   name: "Description",
-  props: ['id', 'todo'],
+  props: ["id", "todo"],
   data(): Data {
     return {
-        editMode: false,
-        description: '',
-        dialog: false,
-        loadingFields: false
+      editMode: false,
+      description: "",
+      dialog: false,
+      loadingFields: false,
     };
   },
   methods: {
     editDescription() {
-        this.editMode = true
+      this.editMode = true;
     },
 
     async updateDescription() {
-        try {
-            this.loadingFields = true
-            const update = await updateTodo({ todo: this.todo, description: this.description }, this.id);
-            const todos = await getTodosById<Data>(this.id);
-            this.editMode = false
-            this.$swal({
-            iconHtml: "<span class='emoji'>&#128512</span>",
-            text: "Descrição atualizada com sucesso!",
-          });
-        }
-        finally {
-            this.loadingFields = false
-        }
+      try {
+        this.loadingFields = true;
+        const update = await updateTodo(
+          { todo: this.todo, description: this.description },
+          this.id
+        );
+        const todos = await getTodosById<Data>(this.id);
+        this.editMode = false;
+        this.$swal({
+          iconHtml: "<span class='emoji'>&#128512</span>",
+          text: "Descrição atualizada com sucesso!",
+        });
+      } finally {
+        this.loadingFields = false;
+      }
     },
 
     async handleClick() {
-        const todos = await getTodosById<Data>(this.id);
-        this.description = todos.description
-        this.dialog = true
+      const todos = await getTodosById<Data>(this.id);
+      this.description = todos.description;
+      this.dialog = true;
     },
 
     closeDialog() {
-        this.dialog = !this.dialog
-        this.description = ""
+      this.dialog = !this.dialog;
+      this.description = "";
     },
   },
 });
@@ -134,21 +154,21 @@ export default Vue.extend({
   max-height: 100px !important;
 }
 
-.theme--dark.v-input input, .theme--dark.v-input textarea {
-    font-family: arial;
-    font-weight: bold;
-    font-size: 1.1rem;
-    color: rgba(255, 255, 255, 0.808);
+.theme--dark.v-input input,
+.theme--dark.v-input textarea {
+  font-family: arial;
+  font-weight: bold;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.808);
 }
 
 .iconEyes {
-    color:#33d9b2 !important;
-    transition: 0.6s;
+  color: #33d9b2 !important;
+  transition: 0.6s;
 }
 .iconEyes:hover {
-    color:#33d9b2;
-    filter: brightness(1.5);
-    transition: 0.6s;
+  color: #33d9b2;
+  filter: brightness(1.5);
+  transition: 0.6s;
 }
-
 </style>

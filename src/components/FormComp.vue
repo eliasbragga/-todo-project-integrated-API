@@ -72,7 +72,7 @@
       </v-flex>
     </v-layout>
     <v-layout>
-      <v-flex class="mt-n8">
+      <v-flex class="mt-n8 container-todo-item">
         <div
           :style="{ display: 'flex' }"
           v-for="(todo, index) in todoList"
@@ -138,7 +138,13 @@
                   <v-list-item>
                     <v-list-item-title>
                       <Description :id="todo._id" :todo="todo.todo"/>
-                      <v-icon @click="openDialog(todo.todo, $event, index)" color="#fbc531"> mdi-lightbulb </v-icon>
+                      <v-tooltip bottom>
+                        <template v-slot:activator="{ on, attrs }">
+
+                          <v-icon v-bind="attrs" v-on="on" @click="openDialog(todo.todo, $event, index)" color="#fbc531"> mdi-lightbulb </v-icon>
+                        </template>
+                        <span style="font-family: Arial, Helvetica, sans-serif; color: white;">Diquinha</span>
+                      </v-tooltip>
                     </v-list-item-title>
                   </v-list-item>
                 </v-list>
@@ -155,6 +161,7 @@
         </div>
       </v-flex>
     </v-layout>
+    <Timeline class="layout"/>
   </v-container>
 </template>
 
@@ -164,6 +171,7 @@ import Swal from "sweetalert2";
 import EditTodo from "./EditTodo.vue";
 import InfoMessage from "./InfoMessage.vue";
 import Description from "./Description.vue";
+import Timeline from "./Timeline.vue";
 import {
   getTodos,
   createTodo,
@@ -200,7 +208,8 @@ export default Vue.extend({
   components: {
     EditTodo,
     InfoMessage,
-    Description
+    Description,
+     Timeline
   },
   data(): Data {
     return {
@@ -467,5 +476,24 @@ export default Vue.extend({
 
 .text-wait {
   color: black;
+}
+
+.container-todo-item {
+  max-height: 420px;
+  overflow: scroll;
+  overflow-x: hidden;
+
+}
+
+*::-webkit-scrollbar {
+  width: 5px;
+  max-height: 100px !important;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #a8a2a2;
+  border-radius: 20px;
+  max-height: 100px !important;
+  margin-bottom: 1rem;
 }
 </style>
