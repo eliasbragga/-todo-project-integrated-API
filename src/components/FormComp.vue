@@ -161,7 +161,7 @@
         </div>
       </v-flex>
     </v-layout>
-    <Timeline class="layout"/>
+    <Timeline :todoList="todoList" class="layout"/>
   </v-container>
 </template>
 
@@ -171,14 +171,14 @@ import Swal from "sweetalert2";
 import EditTodo from "./EditTodo.vue";
 import InfoMessage from "./InfoMessage.vue";
 import Description from "./Description.vue";
-import Timeline from "./Timeline.vue";
+import Timeline from './Timeline.vue'
+import Vue from "vue";
 import {
   getTodos,
   createTodo,
   deleteTodo,
   updateTodo,
 } from "@/services/formService";
-import Vue from "vue";
 interface Teste {
   model: string;
   prompt: string;
