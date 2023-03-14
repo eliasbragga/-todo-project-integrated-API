@@ -161,7 +161,7 @@
         </div>
       </v-flex>
     </v-layout>
-    <Timeline :todoList="todoList" class="layout"/>
+    <Routine :todoList="todoList" class="layout"/>
   </v-container>
 </template>
 
@@ -171,7 +171,7 @@ import Swal from "sweetalert2";
 import EditTodo from "./EditTodo.vue";
 import InfoMessage from "./InfoMessage.vue";
 import Description from "./Description.vue";
-import Timeline from './Timeline.vue'
+import Routine from './Routine.vue'
 import Vue from "vue";
 import {
   getTodos,
@@ -179,7 +179,7 @@ import {
   deleteTodo,
   updateTodo,
 } from "@/services/formService";
-interface Teste {
+interface BodyMessage {
   model: string;
   prompt: string;
   max_tokens: number;
@@ -194,7 +194,7 @@ interface Data {
   isDone: boolean;
   isStarEnabled: boolean;
   toDelete: any[];
-  bodyRequest: Teste;
+  bodyRequest: BodyMessage;
   messageAPI: string;
   dialog: boolean;
   loadingCard: boolean;
@@ -209,7 +209,7 @@ export default Vue.extend({
     EditTodo,
     InfoMessage,
     Description,
-     Timeline
+     Routine
   },
   data(): Data {
     return {
@@ -355,7 +355,6 @@ export default Vue.extend({
             text: "A atividade foi excluída com sucesso.",
             iconHtml: "<span class='emoji'>&#x1F609;</span>",
           }).then(async () => {
-            console.log(typeof idTodo);
             await deleteTodo(idTodo);
             this.getAllTodos();
           });

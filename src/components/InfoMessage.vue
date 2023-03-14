@@ -62,14 +62,6 @@ export default Vue.extend({
       this.$emit("closeDialog", this.index);
     },
   },
-  watch: {
-    progress(newValue) {
-      console.log(newValue);
-    },
-    loadingEnd() {
-      console.log("mudou");
-    },
-  },
 });
 </script>
 
